@@ -38,6 +38,9 @@ class Config:
     ENABLE_CORS = os.environ.get('ENABLE_CORS', 'false').lower() == 'true'
     RATE_LIMIT = os.environ.get('RATE_LIMIT', '100')  # 每分钟请求数
 
+    # 数据库配置
+    DB_PATH = os.environ.get('DB_PATH', 'jieba_stats.db')
+
     # 支持的分词模式
     TOKENIZE_MODES = {
         '精确': 'cut',

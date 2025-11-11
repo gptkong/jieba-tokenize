@@ -13,11 +13,12 @@ import json
 import uuid
 import time
 from functools import wraps
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask.views import MethodView
 from flask_cors import CORS
 import jieba
 from config import config
+from models import init_db, save_request_log, get_stats
 
 class RequestAdapter(logging.LoggerAdapter):
     """请求日志适配器，自动添加request_id"""
@@ -165,6 +166,15 @@ def log_request_info(func):
 
             logging.info(f"[{request_id}] {request.method} {request.path} - 完成 "
                         f"(耗时: {duration:.3f}s, 状态码: {status_code})")
+
+            # 保存到数据库
+            try:
+                data = request.get_json(silent=True) or {}
+                mode = data.get('mode')
+                text_length = len(data.get('text', '')) if 'text' in data else None
+                save_request_log(request.path, request.method, status_code, duration, mode, text_length)
+            except Exception as e:
+                logging.warning(f"保存请求日志失败: {e}")
 
             return result
         except Exception as e:
@@ -330,6 +340,10 @@ def create_app(config_name='default'):
     setup_logging(app_config)
     setup_jieba(app_config)
 
+    # 初始化数据库
+    init_db()
+    logging.info("数据库初始化完成")
+
     # 根据配置启用CORS
     if app_config.ENABLE_CORS:
         CORS(app, resources={r"/api/*": {"origins": "*"}})
@@ -466,9 +480,23 @@ def register_routes(app):
             'version': '1.0.0',
             'endpoints': {
                 'api': '/api/tokenize',
-                'docs': '/api/tokenize (GET)'
+                'docs': '/api/tokenize (GET)',
+                'dashboard': '/dashboard'
             }
         })
+
+    # 监控面板路由
+    @app.route('/dashboard')
+    def dashboard():
+        stats = get_stats()
+        return render_template('dashboard.html', stats=stats, cache_stats=get_cache_stats())
+
+    # 统计数据API
+    @app.route('/api/stats')
+    def api_stats():
+        stats = get_stats()
+        stats['cache'] = get_cache_stats()
+        return jsonify(stats)
 
 # 注册错误处理器（优化版）
 def register_error_handlers(app):

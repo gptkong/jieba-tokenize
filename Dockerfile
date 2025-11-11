@@ -22,9 +22,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 复制应用代码
 COPY app.py .
 COPY config.py .
+COPY models.py .
+COPY templates/ templates/
 
-# 创建日志目录
-RUN mkdir -p /app/logs
+# 创建日志和数据目录
+RUN mkdir -p /app/logs /app/data
 
 # 创建非root用户
 RUN useradd --create-home --shell /bin/bash app \
