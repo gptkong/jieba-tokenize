@@ -33,6 +33,8 @@ def init_db():
                 text_length INTEGER
             )
         ''')
+        conn.execute('CREATE INDEX IF NOT EXISTS idx_timestamp ON request_log(timestamp)')
+        conn.execute('CREATE INDEX IF NOT EXISTS idx_mode ON request_log(mode)')
         conn.commit()
 
 def save_request_log(endpoint, method, status_code, response_time, mode=None, text_length=None):
